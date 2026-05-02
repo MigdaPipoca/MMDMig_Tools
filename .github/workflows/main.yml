@@ -1,5 +1,8 @@
 name: Build ZIP on Changes
 
+permissions:
+  contents: write
+
 on:
   push:
     branches:
@@ -29,20 +32,31 @@ jobs:
             echo "no_changes=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Criar ZIP
-        if: steps.changes.outputs.no_changes == 'false'
-        run: |
-          zip -r mmdmigtools.zip . -x "*.git*" "*.github*"
-
       - name: Criar ZIP correto pro Blender
         if: steps.changes.outputs.no_changes == 'false'
         run: |
-          mkdir build
-          mkdir build/mmdmigtools
-          rsync -av --exclude='.git' --exclude='.github' ./ build/mmdmigtools/
-          cd build
+          rm -rf temp
+          mkdir -p temp/mmdmigtools
+
+          # copia tudo pra dentro da pasta do addon
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='temp' \
+            ./ temp/mmdmigtools/
+
+          cd temp
+
+          # cria o zip com a pasta na raiz
           zip -r ../mmdmigtools.zip mmdmigtools
-      
+
+      - name: Upload do ZIP (artifact)
+        if: steps.changes.outputs.no_changes == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mmdmigtools
+          path: mmdmigtools.zip
+
       - name: Criar tag
         if: steps.changes.outputs.no_changes == 'false'
         id: tag
@@ -50,7 +64,6 @@ jobs:
           TAG="build-${{ github.run_number }}"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      
       - name: Criar Pre-release
         if: steps.changes.outputs.no_changes == 'false'
         uses: softprops/action-gh-release@v2
