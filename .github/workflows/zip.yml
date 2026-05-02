@@ -1,4 +1,4 @@
-name: MMDMig Tools Artifacts
+name: Build ZIP on Changes
 
 permissions:
   contents: write
@@ -35,14 +35,12 @@ jobs:
           rm -rf temp
           mkdir -p temp/mmdmigtools
 
-          # copia tudo
-          cp -r * temp/mmdmigtools/
-
-          # remove lixo
-          rm -rf temp/mmdmigtools/.git
-          rm -rf temp/mmdmigtools/.github
-          rm -rf temp/mmdmigtools/temp
-          rm -f temp/mmdmigtools/*.zip
+          # copia tudo SEM loop
+          tar --exclude='./temp' \
+              --exclude='./.git' \
+              --exclude='./.github' \
+              --exclude='*.zip' \
+              -cf - . | (cd temp/mmdmigtools && tar -xf -)
 
           cd temp
           zip -r ../mmdmigtools.zip mmdmigtools
