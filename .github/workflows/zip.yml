@@ -19,10 +19,9 @@ jobs:
       - name: Create zip with correct structure
         run: |
           mkdir -p dist/mmdmigtools
-          cp -r . dist/mmdmigtools/
+          rsync -av --exclude='dist' . dist/mmdmigtools/
           cd dist
           zip -r ../mmdmigtools.zip mmdmigtools/
-          cd ..
 
       - name: Delete existing pre-release
         env:
