@@ -1,71 +1,42 @@
-name: Build ZIP on Changes
-
-permissions:
-  contents: write
+name: Build and Pre-Release
 
 on:
   push:
     branches:
       - main
-      - master
+
+permissions:
+  contents: write
 
 jobs:
-  build-zip:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout do código
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Detectar mudanças relevantes
-        id: changes
+      - name: Create zip with correct structure
         run: |
-          git fetch origin ${{ github.event.before }}
-          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          mkdir -p dist/mmdmigtools
+          cp -r . dist/mmdmigtools/
+          cd dist
+          zip -r ../mmdmigtools.zip mmdmigtools/
+          cd ..
 
-          if [ -z "$CHANGED" ]; then
-            echo "no_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "no_changes=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Criar ZIP correto pro Blender
-        if: steps.changes.outputs.no_changes == 'false'
-        run: |
-          rm -rf temp
-          mkdir -p temp/mmdmigtools
-
-          # copia tudo SEM loop
-          tar --exclude='./temp' \
-              --exclude='./.git' \
-              --exclude='./.github' \
-              --exclude='*.zip' \
-              -cf - . | (cd temp/mmdmigtools && tar -xf -)
-
-          cd temp
-          zip -r ../mmdmigtools.zip mmdmigtools
-
-      - name: Upload do ZIP (artifact)
-        if: steps.changes.outputs.no_changes == 'false'
-        uses: actions/upload-artifact@v4
-        with:
-          name: mmdmigtools
-          path: mmdmigtools.zip
-
-      - name: Criar tag
-        if: steps.changes.outputs.no_changes == 'false'
-        id: tag
-        run: |
-          TAG="build-${{ github.run_number }}"
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-
-      - name: Criar Pre-release
-        if: steps.changes.outputs.no_changes == 'false'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: Pre-release ${{ steps.tag.outputs.tag }}
-          prerelease: true
-          files: mmdmigtools.zip
+      - name: Delete existing pre-release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete pre-release --yes || true
+          git push origin :refs/tags/pre-release || true
+
+      - name: Create new pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create pre-release \
+            --title "Pre-release (latest)" \
+            --notes "Gerado automaticamente a partir do último push na branch \`main\`." \
+            --prerelease \
+            mmdmigtools.zip
