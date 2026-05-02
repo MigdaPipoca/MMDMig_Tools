@@ -34,13 +34,14 @@ jobs:
         run: |
           zip -r mmdmigtools.zip . -x "*.git*" "*.github*"
 
-      - name: Upload do ZIP (artifact)
+      - name: Criar ZIP correto pro Blender
         if: steps.changes.outputs.no_changes == 'false'
-        uses: actions/upload-artifact@v4
-        with:
-          name: mmdmigtools
-          path: mmdmigtools.zip
-
+        run: |
+          mkdir build
+          mkdir build/mmdmigtools
+          rsync -av --exclude='.git' --exclude='.github' ./ build/mmdmigtools/
+          cd build
+          zip -r ../mmdmigtools.zip mmdmigtools
       
       - name: Criar tag
         if: steps.changes.outputs.no_changes == 'false'
