@@ -4,4 +4,6 @@
 # Usage
 File > Preferences > Add-ons > Dropdown menu > Install from Disk > .ZIP file from releases
 
-#
+# Req.
+Blender 4.5^
+MMD Tools
