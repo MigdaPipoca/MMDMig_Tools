@@ -32,7 +32,7 @@ jobs:
       - name: Criar ZIP
         if: steps.changes.outputs.no_changes == 'false'
         run: |
-          zip -r projeto.zip . -x "*.git*" "*.github*"
+          zip -r mmdmigtools.zip . -x "*.git*" "*.github*"
 
       - name: Upload do ZIP
         if: steps.changes.outputs.no_changes == 'false'
