@@ -1,4 +1,4 @@
-name: Auto Version + ZIP
+name: Build ZIP on Changes
 
 on:
   push:
@@ -7,52 +7,36 @@ on:
       - master
 
 jobs:
-  build:
+  build-zip:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout do código
         uses: actions/checkout@v4
-        with:
-          persist-credentials: true
 
-      - name: Configurar Git
+      - name: Detectar mudanças relevantes
+        id: changes
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git fetch origin ${{ github.event.before }}
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
 
-      - name: Incrementar versão
-        id: version
-        run: |
-          if [ -f version.txt ]; then
-            VERSION=$(cat version.txt)
+          echo "Arquivos alterados:"
+          echo "$CHANGED"
+
+          if [ -z "$CHANGED" ]; then
+            echo "no_changes=true" >> $GITHUB_OUTPUT
           else
-            VERSION="1.0"
+            echo "no_changes=false" >> $GITHUB_OUTPUT
           fi
 
-          echo "Versão atual: $VERSION"
-
-          # Incremento +0.1
-          NEW_VERSION=$(awk "BEGIN {printf \"%.1f\", $VERSION + 0.1}")
-
-          echo "Nova versão: $NEW_VERSION"
-
-          echo $NEW_VERSION > version.txt
-
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Commit da nova versão
-        run: |
-          git add version.txt
-          git commit -m "🔖 bump version to ${{ steps.version.outputs.version }}" || echo "Nada pra commitar"
-          git push
-
       - name: Criar ZIP
+        if: steps.changes.outputs.no_changes == 'false'
         run: |
-          zip -r mmdmigtools-${{ steps.version.outputs.version }}.zip . -x "*.git*" "*.github*"
+          zip -r projeto.zip . -x "*.git*" "*.github*"
 
       - name: Upload do ZIP
+        if: steps.changes.outputs.no_changes == 'false'
         uses: actions/upload-artifact@v4
         with:
-          name: mmdmigtools-${{ steps.version.outputs.version }}
-          path: mmdmigtools-${{ steps.version.outputs.version }}.zip
+          name: MMDMig Tools [DOWNLOAD ZIP]
+          path: mmdmigtools.zip
