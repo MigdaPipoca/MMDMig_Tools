@@ -1,0 +1,73 @@
+name: MMDMig Tools Artifacts
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-zip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Detectar mudanças relevantes
+        id: changes
+        run: |
+          git fetch origin ${{ github.event.before }}
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+
+          if [ -z "$CHANGED" ]; then
+            echo "no_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "no_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Criar ZIP correto pro Blender
+        if: steps.changes.outputs.no_changes == 'false'
+        run: |
+          rm -rf temp
+          mkdir -p temp/mmdmigtools
+
+          # copia tudo
+          cp -r * temp/mmdmigtools/
+
+          # remove lixo
+          rm -rf temp/mmdmigtools/.git
+          rm -rf temp/mmdmigtools/.github
+          rm -rf temp/mmdmigtools/temp
+          rm -f temp/mmdmigtools/*.zip
+
+          cd temp
+          zip -r ../mmdmigtools.zip mmdmigtools
+
+      - name: Upload do ZIP (artifact)
+        if: steps.changes.outputs.no_changes == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mmdmigtools
+          path: mmdmigtools.zip
+
+      - name: Criar tag
+        if: steps.changes.outputs.no_changes == 'false'
+        id: tag
+        run: |
+          TAG="build-${{ github.run_number }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Criar Pre-release
+        if: steps.changes.outputs.no_changes == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Pre-release ${{ steps.tag.outputs.tag }}
+          prerelease: true
+          files: mmdmigtools.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
