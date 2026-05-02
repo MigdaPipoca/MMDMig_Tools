@@ -1,0 +1,42 @@
+name: Build ZIP on Changes
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-zip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Detectar mudanças relevantes
+        id: changes
+        run: |
+          git fetch origin ${{ github.event.before }}
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+
+          echo "Arquivos alterados:"
+          echo "$CHANGED"
+
+          if [ -z "$CHANGED" ]; then
+            echo "no_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "no_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Criar ZIP
+        if: steps.changes.outputs.no_changes == 'false'
+        run: |
+          zip -r projeto.zip . -x "*.git*" "*.github*"
+
+      - name: Upload do ZIP
+        if: steps.changes.outputs.no_changes == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: projeto-zip
+          path: projeto.zip
