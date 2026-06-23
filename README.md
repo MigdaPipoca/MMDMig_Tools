@@ -6,4 +6,5 @@ File > Preferences > Add-ons > Dropdown menu > Install from Disk > .ZIP file fro
 
 # Req.
 Blender 4.5^
+
 MMD Tools
